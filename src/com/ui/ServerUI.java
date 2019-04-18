@@ -7,6 +7,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
@@ -202,7 +203,27 @@ public class ServerUI extends Application {
         receivedMessageArea.setMaxHeight(900);
 
 
-        return new VBox(receivedMessage, receivedMessageArea);
+        return new VBox(receivedMessage, receivedMessageArea, getClearButton());
+    }
+
+    public static BorderPane getClearButton() {
+        BorderPane borderPane = new BorderPane();
+        Button button = new Button("clear");
+        button.setPadding(new Insets(10, 10, 10, 10));
+
+        button.setOnMouseClicked(event -> {
+
+            rightVBox.getChildren().clear();
+
+            buffer = new StringBuffer();
+
+            rightVBox.getChildren().add(getRightVBox(buffer));
+
+        });
+
+        borderPane.setRight(button);
+
+        return borderPane;
     }
 
     public static void reFreshList() {

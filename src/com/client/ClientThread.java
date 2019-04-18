@@ -7,10 +7,7 @@ import javafx.application.Platform;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.Socket;
+import java.net.*;
 import java.util.*;
 
 public class ClientThread extends Thread {
@@ -96,6 +93,7 @@ public class ClientThread extends Thread {
                         ClientUI.reFreshLeftBottom(false);
                         clientList.remove(server);
                         ClientUI.reFreshList();
+
                     }
                 });
 
@@ -108,7 +106,16 @@ public class ClientThread extends Thread {
                         Platform.runLater(new Runnable() {
                             @Override
                             public void run() {
+                                ClientUI.reFreshLeftUpvBox();
                                 ClientUI.reFreshLeftBottom(true);
+                                ClientUI.reFreshList();
+                                try {
+                                    System.out.println(socket.getLocalPort());
+                                    datagramSocket = new DatagramSocket(socket.getLocalPort());
+                                } catch (SocketException e) {
+                                    e.printStackTrace();
+                                }
+
                             }
                         });
 
@@ -208,8 +215,6 @@ public class ClientThread extends Thread {
         byte[] data = new byte[1024];
 
         DatagramPacket datagramPacket = new DatagramPacket(data, data.length);
-
-        System.out.println("哈哈had啥++++++++++++");
 
         datagramSocket.receive(datagramPacket);
 
