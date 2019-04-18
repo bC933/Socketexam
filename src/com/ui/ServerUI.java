@@ -75,7 +75,7 @@ public class ServerUI extends Application {
         rightVBox.setPadding(new Insets(10, 5, 10, 10));
 
         hBox = new HBox(leftVBox, rightVBox);
-        Scene scene = new Scene(hBox, 900, 550);
+        Scene scene = new Scene(hBox, 890, 450);
         primaryStage.setScene(scene);
         primaryStage.setTitle("server");
         primaryStage.show();

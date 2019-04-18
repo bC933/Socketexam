@@ -110,7 +110,6 @@ public class ClientThread extends Thread {
                                 ClientUI.reFreshLeftBottom(true);
                                 ClientUI.reFreshList();
                                 try {
-                                    System.out.println(socket.getLocalPort());
                                     datagramSocket = new DatagramSocket(socket.getLocalPort());
                                 } catch (SocketException e) {
                                     e.printStackTrace();
@@ -150,44 +149,32 @@ public class ClientThread extends Thread {
 
             receiveMessage = new String(bytes, 0, len, "UTF-8");
 
-            if (len >= 6) {
-                if ("client".equals(receiveMessage.substring(0, 6))) {
+            System.out.println("长度是" + len + "---收到的消息是" + receiveMessage);
 
-                    clientList.clear();
+            if (receiveMessage.charAt(0) == 'c' && receiveMessage.charAt(1) == 'l' && receiveMessage.charAt(2) == 'i' && receiveMessage.charAt(3) == 'e' && receiveMessage.charAt(4) == 'n' && receiveMessage.charAt(5) == 't') {
 
-                    clientList.add(server);
+                clientList.clear();
 
-                    String[] info = receiveMessage.split("#");
-                    String list = info[1];
+                clientList.add(server);
 
-                    String[] client = list.split(",");
+                String[] info = receiveMessage.split("#");
+                String list = info[1];
 
-                    for (String s : client) {
-                        String[] split = s.split(":");
-                        if (!split[1].equals(String.valueOf(socket.getLocalPort()))) {
-                            clientList.add(new Client(split[0], split[1]));
-                        }
+                String[] client = list.split(",");
+
+                for (String s : client) {
+                    String[] split = s.split(":");
+                    if (!split[1].equals(String.valueOf(socket.getLocalPort()))) {
+                        clientList.add(new Client(split[0], split[1]));
                     }
-
-                    Platform.runLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            ClientUI.reFreshList();
-                        }
-                    });
-                } else {
-                    Platform.runLater(new Runnable() {
-                        @Override
-                        public void run() {
-
-                            String s = String.valueOf("[" + socket.getInetAddress().getHostAddress() + ":" + socket.getPort() + "]" + "发来一条消息:");
-                            s += receiveMessage;
-                            s += "\n";
-                            ClientUI.reFreshReceived(s);
-
-                        }
-                    });
                 }
+
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        ClientUI.reFreshList();
+                    }
+                });
             } else {
                 Platform.runLater(new Runnable() {
                     @Override
@@ -200,6 +187,7 @@ public class ClientThread extends Thread {
 
                     }
                 });
+
             }
         }
 
