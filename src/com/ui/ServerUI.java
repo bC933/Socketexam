@@ -2,14 +2,11 @@ package com.ui;
 
 import com.server.ServerThread;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
@@ -43,8 +40,10 @@ public class ServerUI extends Application {
 
     public static Label noneClient;
 
-    public static List<Socket> serverThreadList;
+    public static List<Socket> serverThreadList = ServerThread.socketList;
+
     public static List<CheckBox> chooseClientList;
+
     public static TextArea sendMessageArea;
 
     public static void main(String[] args) {
@@ -58,12 +57,13 @@ public class ServerUI extends Application {
         leftUpVBox.setPadding(new Insets(10, 10, 10, 10));
         leftUpVBox.setAlignment(Pos.CENTER);
 
-        leftBottomVBox.getChildren().add(getLeftBottomVBox());
-        leftBottomVBox.setPadding(new Insets(10, 5, 10, 10));
-        leftBottomVBox.setAlignment(Pos.CENTER);
 
         leftListVBox = getLeftListVBox();
         leftListVBox.setPadding(new Insets(10, 5, 10, 10));
+
+        leftBottomVBox.getChildren().add(getLeftBottomVBox());
+        leftBottomVBox.setPadding(new Insets(10, 5, 10, 10));
+        leftBottomVBox.setAlignment(Pos.CENTER);
 
         leftTextVBox = getLeftTextVBox();
         leftTextVBox.setPadding(new Insets(10, 5, 10, 10));
@@ -110,7 +110,6 @@ public class ServerUI extends Application {
      * @return
      */
     private VBox getLeftUpVBox() {
-        serverThreadList = ServerThread.socketList;
 
         HBox ipHBox = showInfo("IPAddress：", ServerThread.getLocalIPAddress());
         ipHBox.setPadding(new Insets(10, 10, 10, 10));
@@ -212,6 +211,20 @@ public class ServerUI extends Application {
         chooseClientList = getChooseClientList(serverThreadList);
         if (chooseClientList.size() > 0) {
             leftListVBox.getChildren().addAll(chooseClientList);
+            StringBuilder list = new StringBuilder();
+            for (CheckBox checkBox : chooseClientList) {
+                String[] info = checkBox.getText().split(":");
+                String client = new String(info[0] + ":" + info[1] + ",");
+                list.append(client);
+            }
+
+            list.delete(list.length() - 1, list.length());// 去掉最后一个逗号
+
+            for (Socket socket : serverThreadList) {
+
+                serverThread.sendMessage(socket, "client#" + list);
+
+            }
         } else {
             leftListVBox.getChildren().add(noneClient);
         }

@@ -1,6 +1,7 @@
 package com.ui;
 
 import com.client.ClientThread;
+import com.domain.Client;
 import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -14,11 +15,18 @@ import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.client.ClientThread.socket;
 
 public class ClientUI extends Application {
 
-    private static ClientThread client = new ClientThread();
-    ;
+    private static ClientThread client;
+
     public static TextArea sendMessageArea;
     public static StringBuffer buffer = null;
 
@@ -26,6 +34,7 @@ public class ClientUI extends Application {
 
     public static VBox leftUpVBox = null;
 
+    public static VBox leftListVBox = new VBox();
 
     public static VBox leftTextVBox = new VBox();
 
@@ -34,6 +43,12 @@ public class ClientUI extends Application {
     public static VBox rightVBox = null;
 
     public static HBox hBox = null;
+
+    public static Label noneClient;
+
+    public static List<Client> clientList = ClientThread.clientList;
+
+    public static List<CheckBox> chooseClientList;
 
     public static void main(String[] args) {
         launch(args);
@@ -45,14 +60,17 @@ public class ClientUI extends Application {
         leftUpVBox = getLeftUpVBox();
         leftUpVBox.setPadding(new Insets(10, 5, 10, 10));
 
-
-        leftBottomVBox.getChildren().add(getLeftBottomVBox(false));
-        leftBottomVBox.setPadding(new Insets(10, 5, 10, 10));
+        leftListVBox = getLeftListVBox();
+        leftListVBox.setPadding(new Insets(10, 5, 10, 10));
 
         leftTextVBox = getLeftTextVBox();
         leftTextVBox.setPadding(new Insets(10, 5, 10, 10));
 
-        leftVBox.getChildren().addAll(leftUpVBox, leftTextVBox, leftBottomVBox);
+        leftBottomVBox.getChildren().add(getLeftBottomVBox(false));
+        leftBottomVBox.setPadding(new Insets(10, 5, 10, 10));
+
+
+        leftVBox.getChildren().addAll(leftUpVBox, leftListVBox, leftTextVBox, leftBottomVBox);
 
         rightVBox = getRightVBox(new StringBuffer());
         rightVBox.setPadding(new Insets(10, 5, 10, 10));
@@ -68,12 +86,15 @@ public class ClientUI extends Application {
             @Override
             public void handle(WindowEvent event) {
 
-                try {
-                    ClientThread.socket.shutdownInput();
-                    ClientThread.socket.shutdownOutput();
-                    ClientThread.socket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                if (client != null) {
+                    try {
+                        socket.shutdownInput();
+                        socket.shutdownOutput();
+                        socket.close();
+                        client.getDatagramSocket().close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
 
                 System.exit(0);
@@ -82,8 +103,20 @@ public class ClientUI extends Application {
         });
 
         buffer = new StringBuffer();
-//        client = new ClientThread();
-        client.start();
+
+        startClient();
+    }
+
+    private void startClient() {
+
+        new Thread() {
+            @Override
+            public void run() {
+                client = new ClientThread();
+                client.start();
+            }
+        }.start();
+
     }
 
     /**
@@ -93,6 +126,20 @@ public class ClientUI extends Application {
      */
     private VBox getLeftUpVBox() {
 
+        HBox ipHBox = showInfo("IPAddress：     ", "Not Connect");
+        ipHBox.setPadding(new Insets(10, 10, 10, 10));
+        ipHBox.setSpacing(10);
+
+        HBox portHBox = showInfo("Port：             ", "Not Connect");
+        portHBox.setPadding(new Insets(10, 10, 10, 10));
+        portHBox.setSpacing(10);
+
+        return new VBox(ipHBox, portHBox);
+    }
+
+    public static void reFreshLeftUpvBox() {
+
+        leftUpVBox.getChildren().clear();
 
         HBox ipHBox = showInfo("IPAddress：", client.getLocalIPAddress());
         ipHBox.setPadding(new Insets(10, 10, 10, 10));
@@ -102,7 +149,30 @@ public class ClientUI extends Application {
         portHBox.setPadding(new Insets(10, 10, 10, 10));
         portHBox.setSpacing(10);
 
-        return new VBox(ipHBox, portHBox);
+        leftUpVBox.getChildren().add(new VBox(ipHBox, portHBox));
+        leftUpVBox.setPadding(new Insets(10, 5, 10, 10));
+
+    }
+
+    private VBox getLeftListVBox() {
+
+        Label chooseClient = new Label("Choose Client：");
+        chooseClient.setFont(new Font(15));
+        chooseClient.setPadding(new Insets(10, 10, 10, 10));
+
+        VBox vBox = new VBox(chooseClient);
+        vBox.setPadding(new Insets(10, 10, 10, 10));
+        vBox.setSpacing(10);
+        chooseClientList = getChooseClientList(clientList);
+        if (chooseClientList.size() > 0) {
+            vBox.getChildren().addAll(chooseClientList);
+        } else {
+            noneClient = new Label("None Client");
+            noneClient.setFont(new Font(15));
+            noneClient.setPadding(new Insets(10, 10, 10, 10));
+            vBox.getChildren().add(noneClient);
+        }
+        return vBox;
     }
 
     private VBox getLeftTextVBox() {
@@ -135,8 +205,30 @@ public class ClientUI extends Application {
         sendButton.setAlignment(Pos.CENTER_RIGHT);
 
         sendButton.setOnMouseClicked(event -> {
-            String content = sendMessageArea.getText();
-            client.sendMessage(content);
+
+            if (chooseClientList.size() > 0) {
+
+                for (CheckBox c : chooseClientList
+                ) {
+                    if (c.isSelected()) {
+                        if ("服务端".equals(c.getText())) {
+                            String content = sendMessageArea.getText();
+                            client.sendMessage(content);
+                        } else {
+                            Client cli = clientList.get(Integer.parseInt(c.getId()));
+                            String content = sendMessageArea.getText();
+                            byte[] bytes = content.getBytes();
+                            try {
+                                DatagramPacket datagramPacket = new DatagramPacket(bytes, bytes.length, InetAddress.getByName(cli.getIPAddress()), Integer.parseInt(cli.getPort()));
+                                DatagramSocket datagramSocket = client.getDatagramSocket();
+                                datagramSocket.send(datagramPacket);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+            }
         });
 
 
@@ -157,12 +249,24 @@ public class ClientUI extends Application {
         receivedMessage.setAlignment(Pos.CENTER);
 
         TextArea receivedMessageArea = new TextArea(buffer.toString());
-        receivedMessageArea.setWrapText(true); receivedMessageArea.setWrapText(true);
+        receivedMessageArea.setWrapText(true);
+        receivedMessageArea.setWrapText(true);
         receivedMessageArea.setMaxWidth(410);
         receivedMessageArea.setMaxHeight(900);
 
 
         return new VBox(receivedMessage, receivedMessageArea);
+    }
+
+    public static void reFreshList() {
+        leftListVBox.getChildren().remove(noneClient);
+        leftListVBox.getChildren().removeAll(chooseClientList);
+        chooseClientList = getChooseClientList(clientList);
+        if (chooseClientList.size() > 0) {
+            leftListVBox.getChildren().addAll(chooseClientList);
+        } else {
+            leftListVBox.getChildren().add(noneClient);
+        }
     }
 
     public static void reFreshReceived(String str) {
@@ -189,7 +293,7 @@ public class ClientUI extends Application {
      * @param str2 内容
      * @return
      */
-    private HBox showInfo(String str1, String str2) {
+    private static HBox showInfo(String str1, String str2) {
 
         Label info = new Label(str1);
         info.setFont(new Font(15));
@@ -199,5 +303,30 @@ public class ClientUI extends Application {
 
         return new HBox(info, textField);
 
+    }
+
+    /**
+     * 获取客户端列表
+     *
+     * @param clientList
+     * @return
+     */
+    private static List<CheckBox> getChooseClientList(List<Client> clientList) {
+
+        List<CheckBox> checkBoxes = new ArrayList<>();
+
+        for (Client c : clientList
+        ) {
+            if (client.getServer().getPort().equals(c.getPort())) {
+                CheckBox checkBox = new CheckBox("服务端");
+                checkBox.setId(String.valueOf(clientList.indexOf(c)));
+                checkBoxes.add(checkBox);
+            } else {
+                CheckBox checkBox = new CheckBox(c.getIPAddress() + ":" + c.getPort());
+                checkBox.setId(String.valueOf(clientList.indexOf(c)));
+                checkBoxes.add(checkBox);
+            }
+        }
+        return checkBoxes;
     }
 }

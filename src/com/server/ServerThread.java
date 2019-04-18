@@ -13,7 +13,7 @@ import java.util.List;
 
 public class ServerThread extends Thread {
 
-    private static String host = "172.16.33.37";
+    private static String host = "localhost";
     private static int port = 9999;
 
     private static ServerSocket serverSocket = null;
